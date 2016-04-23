@@ -29,25 +29,16 @@ public class XrayCamera : MonoBehaviour
     private List<GameObject> m_ObjectsInRange = new List<GameObject>();
 
 
-
-    // Use this for initialization
-    void Start()
-    {
-
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-
-    }
-
     void FixedUpdate()
     {
         GetGameObjects();
         Xray();
     }
 
+    /// <summary>
+    /// Check if the object in the parameter, is inside the <see cref="m_fAngle"/>
+    /// </summary>
+    /// <param name="obj">Object for check</param>
     void ScanView(GameObject obj)
     {
         Vector3 cameraFoward = this.gameObject.transform.forward;
@@ -69,21 +60,18 @@ public class XrayCamera : MonoBehaviour
             }
 
         }
-        else
-        {
-            if (m_ObjectsInRange.Exists(x=>x == obj))
-            {
-                Xray(obj, true);
-                m_ObjectsInRange.Remove(obj);
-            }
-        }
+        
 
 
     }
 
+    /// <summary>
+    /// Get all objects around the camera and <see cref="ScanView(GameObject)"/>. Also, if there is any object inside the <seealso cref="m_ObjectsInRange"/>, this object will be remove
+    /// and return to a normal state.
+    /// </summary>
     void GetGameObjects()
     {
-        var hits = Physics.SphereCastAll(this.transform.position, m_iDistance, Vector3.forward,m_iDistance/2);
+        var hits = Physics.SphereCastAll(this.transform.position, m_iDistance, Vector3.forward,m_iDistance);
 
         foreach (RaycastHit hit in hits)
         {
@@ -98,6 +86,9 @@ public class XrayCamera : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// If the <see cref="m_bTransparent"/> is true,the Xray will use the <seealso cref="Transparent"/>, otherwise <seealso cref="ToggleMesh"/>
+    /// </summary>
     void Xray()
     {
         if (m_bTransparent)
@@ -109,6 +100,11 @@ public class XrayCamera : MonoBehaviour
             ToggleMesh();
         }
     }
+    /// <summary>
+    /// If the <see cref="m_bTransparent"/> is true,the Xray will use the <seealso cref="Transparent(GameObject, bool)"/>, otherwise <seealso cref="ToggleMesh(GameObject, bool)"/>
+    /// </summary>
+    /// <param name="obj">A single object</param>
+    /// <param name="invert">Invert the action</param>
     void Xray(GameObject obj, bool invert)
     {
         if (m_bTransparent)
@@ -120,7 +116,9 @@ public class XrayCamera : MonoBehaviour
             ToggleMesh(obj, invert);
         }
     }
-
+    /// <summary>
+    /// Make the material alpha color 0.5f.
+    /// </summary>
     void Transparent()
     {
         foreach (GameObject gameobjectInRange in m_ObjectsInRange)
@@ -134,6 +132,11 @@ public class XrayCamera : MonoBehaviour
 
         }
     }
+    /// <summary>
+    /// Make the material alpha color 0.5f.
+    /// </summary>
+    /// <param name="obj">A single object</param>
+    /// <param name="invert">invert the action</param>
     void Transparent(GameObject obj, bool invert)
     {
 
@@ -157,6 +160,9 @@ public class XrayCamera : MonoBehaviour
 
     }
 
+    /// <summary>
+    /// Toggle the mesh render.
+    /// </summary>
     void ToggleMesh()
     {
         foreach (GameObject gameobjectInRange in m_ObjectsInRange)
@@ -170,7 +176,11 @@ public class XrayCamera : MonoBehaviour
 
         }
     }
-
+    /// <summary>
+    /// Toggle the mesh render.
+    /// </summary>
+    /// <param name="obj">A single object</param>
+    /// <param name="invert">invert the action</param>
     void ToggleMesh(GameObject obj, bool invert)
     {
 
@@ -199,8 +209,17 @@ public class XrayCamera : MonoBehaviour
     void OnDrawGizmos()
     {
         Gizmos.color = Color.red;
-        //Gizmos.DrawFrustum(this.gameObject.transform.position, m_fAngle,m_iDistance,0, 16/9);
-        Gizmos.DrawWireSphere(transform.position, m_iDistance);
+
+        Vector3 PointA = ((transform.forward * m_iDistance));
+        PointA = Quaternion.Euler(0, m_fAngle, 0) * PointA;
+        PointA += transform.position;
+        Gizmos.DrawLine(transform.position, PointA);
+
+        Vector3 PointB = (transform.forward * m_iDistance);
+        PointB = Quaternion.Euler(0, -m_fAngle, 0) * PointB;
+        PointB += transform.position;
+        Gizmos.DrawLine(transform.position, PointB);
+
     }
 
 }
