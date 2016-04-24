@@ -1,7 +1,13 @@
 ﻿using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 
+/*
+    (C) Lucas de Souza Góes 2016
+*/
+
+[AddComponentMenu("Camera/X-Ray")]
 public class XrayCamera : MonoBehaviour
 {
 
@@ -14,7 +20,7 @@ public class XrayCamera : MonoBehaviour
     /// <summary>
     /// This is the angle that the xray will affect the objects.
     /// </summary>
-    [SerializeField, Tooltip("This is the angle, that the Xray will affect"), Range(0, 180)]
+    [SerializeField, Tooltip("This is the angle, that the Xray will affect"), Range(1, 90)]
     private float m_fAngle = 30;
 
     /// <summary>
@@ -23,13 +29,13 @@ public class XrayCamera : MonoBehaviour
     [SerializeField, Tooltip("Distance that the Xray will affect"), Range(1, 10)]
     private int m_iDistance = 5;
 
+    
     /// <summary>
-    /// This is the list of GameObjects that are caught by the Xray
+    /// This is the array of GameObjects that were caught by the Xray
     /// </summary>
-    private List<GameObject> m_ObjectsInRange = new List<GameObject>();
+    private GameObject[] m_ObjectsInRange = new GameObject[5];
 
-
-    void FixedUpdate()
+    void LateUpdate()
     {
         GetGameObjects();
         Xray();
@@ -54,13 +60,12 @@ public class XrayCamera : MonoBehaviour
 
         if (angle < m_fAngle)
         {
-            if (!m_ObjectsInRange.Exists(x => x == obj))
-            {
-                m_ObjectsInRange.Add(obj);
-            }
+
+            AddObject(obj);
+
 
         }
-        
+
 
 
     }
@@ -71,18 +76,19 @@ public class XrayCamera : MonoBehaviour
     /// </summary>
     void GetGameObjects()
     {
-        var hits = Physics.SphereCastAll(this.transform.position, m_iDistance, Vector3.forward,m_iDistance);
+        var hits = Physics.SphereCastAll(this.transform.position, m_iDistance, Vector3.forward, m_iDistance);
 
         foreach (RaycastHit hit in hits)
         {
             ScanView(hit.collider.gameObject);
         }
-        var Objects = m_ObjectsInRange.FindAll(x => !System.Array.Exists(hits, y => y.collider.gameObject == x));
-        
-        for(int i = 0; i < Objects.Count; i++)
+        var Objects = System.Array.FindAll(m_ObjectsInRange, x => !System.Array.Exists(hits, y => y.collider.gameObject == x));
+
+        for (int i = 0; i < Objects.Length; i++)
         {
             Xray(Objects[i], true);
-            m_ObjectsInRange.Remove(Objects[i]);
+            int index = System.Array.FindIndex(m_ObjectsInRange, x => x == Objects[i]);
+            RemoveObject(index);
         }
     }
 
@@ -123,11 +129,14 @@ public class XrayCamera : MonoBehaviour
     {
         foreach (GameObject gameobjectInRange in m_ObjectsInRange)
         {
-            Renderer mat = gameobjectInRange.GetComponent<Renderer>();
-
-            if (mat.material.color.a > 0.5f)
+            if (gameobjectInRange != null)
             {
-                mat.material.color = new Color(mat.material.color.r, mat.material.color.g, mat.material.color.b, 0.5f);
+                Renderer mat = gameobjectInRange.GetComponent<Renderer>();
+
+                if (mat.material.color.a > 0.5f)
+                {
+                    mat.material.color = new Color(mat.material.color.r, mat.material.color.g, mat.material.color.b, 0.5f);
+                }
             }
 
         }
@@ -139,23 +148,24 @@ public class XrayCamera : MonoBehaviour
     /// <param name="invert">invert the action</param>
     void Transparent(GameObject obj, bool invert)
     {
-
-        Renderer mat = obj.GetComponent<Renderer>();
-        if(invert)
+        if (obj != null)
         {
-            if (mat.material.color.a == 0.5f)
+            Renderer mat = obj.GetComponent<Renderer>();
+            if (invert)
             {
-                mat.material.color = new Color(mat.material.color.r, mat.material.color.g, mat.material.color.b, 1f);
+                if (mat.material.color.a == 0.5f)
+                {
+                    mat.material.color = new Color(mat.material.color.r, mat.material.color.g, mat.material.color.b, 1f);
+                }
+            }
+            else
+            {
+                if (mat.material.color.a > 0.5f)
+                {
+                    mat.material.color = new Color(mat.material.color.r, mat.material.color.g, mat.material.color.b, 0.5f);
+                }
             }
         }
-        else
-        {
-            if (mat.material.color.a > 0.5f)
-            {
-                mat.material.color = new Color(mat.material.color.r, mat.material.color.g, mat.material.color.b, 0.5f);
-            }
-        }
-        
 
 
     }
@@ -167,11 +177,14 @@ public class XrayCamera : MonoBehaviour
     {
         foreach (GameObject gameobjectInRange in m_ObjectsInRange)
         {
-            MeshRenderer mesh = gameobjectInRange.GetComponent<MeshRenderer>();
-
-            if (mesh.enabled)
+            if (gameobjectInRange != null)
             {
-                mesh.enabled = false;
+                MeshRenderer mesh = gameobjectInRange.GetComponent<MeshRenderer>();
+
+                if (mesh.enabled)
+                {
+                    mesh.enabled = false;
+                }
             }
 
         }
@@ -184,25 +197,58 @@ public class XrayCamera : MonoBehaviour
     void ToggleMesh(GameObject obj, bool invert)
     {
 
-        MeshRenderer mesh = obj.GetComponent<MeshRenderer>();
-        if(invert)
+       
+        if (obj != null)
         {
-            if (!mesh.enabled)
+            MeshRenderer mesh = obj.GetComponent<MeshRenderer>();
+            if (invert)
             {
-                mesh.enabled = true;
+                if (!mesh.enabled)
+                {
+                    mesh.enabled = true;
+                }
+            }
+            else
+            {
+                if (mesh.enabled)
+                {
+                    mesh.enabled = false;
+                }
             }
         }
-        else
-        {
-            if (mesh.enabled)
-            {
-                mesh.enabled = false;
-            }
-        }
-        
 
     }
 
+    /// <summary>
+    /// Add an Object in the array.
+    /// </summary>
+    /// <param name="obj">Object that wants to add</param>
+    /// <returns>If the task was a success or not</returns>
+    bool AddObject(GameObject obj)
+    {
+        for (int i = 0; i < m_ObjectsInRange.Length; i++)
+        {
+            if (m_ObjectsInRange[i] == obj)
+            {
+                return false; // Object already exist
+            }
+            if (m_ObjectsInRange[i] == null)
+            {
+                m_ObjectsInRange[i] = obj; //Object added to the array.
+                return true;
+            }
+        }
+
+        return false;//The array was full.
+    }
+    /// <summary>
+    /// Remove the object from the array.
+    /// </summary>
+    /// <param name="index">Where the object is.</param>
+    void RemoveObject(int index)
+    {
+        m_ObjectsInRange[index] = null;
+    }
 
     //Gizmo
 
